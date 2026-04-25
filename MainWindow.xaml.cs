@@ -131,13 +131,39 @@ namespace FinalWork
             });
         }
 
-        private void Window_KeyDown(object sender, KeyEventArgs e)
+        private async void Window_KeyDown(object sender, KeyEventArgs e)
         {
             if (Keyboard.Modifiers == ModifierKeys.Control)
             {
                 if (e.Key == Key.C) { isMovingOperation = false; PrepareBuffer(); }
                 else if (e.Key == Key.X) { isMovingOperation = true; PrepareBuffer(); }
                 else if (e.Key == Key.V) { ExecutePaste(); }
+            }else if(e.Key == Key.Delete) {
+
+                ListView activeList = LeftFileListView.IsFocused ? LeftFileListView : (RightFileListView.IsFocused ? RightFileListView : null);
+
+                if (activeList == null || activeList.SelectedItem == null) return;
+
+                FileItem selected = activeList.SelectedItem as FileItem;
+
+                if (selected == null) return;
+
+                var result = MessageBox.Show($"Are you sure you want to delete '{selected.Name}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    try {
+                        await Task.Run(() =>
+                        {
+                            if (File.Exists(selected.FullPath)) File.Delete(selected.FullPath);
+                            else if (Directory.Exists(selected.FullPath)) Directory.Delete(selected.FullPath, true);
+                        });
+
+                        await BtnScan_Click1(null, null);
+                        await BtnScan_Click2(null, null);
+                    }
+                    catch (Exception ex) { MessageBox.Show($"Помилка при видалені: {ex.Message}"); }
+                }
             }
         }
 
@@ -177,6 +203,7 @@ namespace FinalWork
                     else if (Directory.Exists(_buffer.FullPath))
                     {
                         if (isMovingOperation) Directory.Move(_buffer.FullPath, targetPath);
+                        else throw new InvalidOperationException("Copying directories is not supported in this version.");
                     }
                 });
                 await BtnScan_Click1(null, null);
